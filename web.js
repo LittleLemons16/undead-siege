@@ -44,7 +44,7 @@ const send=u=>{try{if(ws&&ws.readyState==1)ws.send(u)}catch(e){}};
 const notify=()=>{const l=list();subs.forEach(f=>{try{f({peers:l})}catch(e){}})};
 const list=()=>{const now=Date.now(),out=[];for(const c in games){const u=games[c];if(now-(u._rx||0)>110000)continue;if(mine&&mine.c==c)continue;out.push({peer:'pub-'+c,isMe:false,sameTab:false,presence:{us:u}})}if(mine)out.push({peer:'pub-me',isMe:true,sameTab:true,presence:{us:mine}});return out};
 function onPub(topic,pl){if(!topic.startsWith(PFX))return;const c=topic.slice(PFX.length).toUpperCase();if(!/^[A-Z0-9]{4}$/.test(c))return;if(!pl.length){delete games[c];notify();return}
- try{const o=JSON.parse(td.decode(pl));if(!o||typeof o!='object')return;const u={v:String(o.v||'').slice(0,12),c,m:String(o.m||'').slice(0,24),d:String(o.d||'').slice(0,12),n:Math.max(1,Math.min(4,o.n|0)),r:Math.max(0,o.r|0),h:String(o.h||'').slice(0,14),_rx:Date.now()};games[c]=u;notify()}catch(e){}}
+ try{const o=JSON.parse(td.decode(pl));if(!o||typeof o!='object')return;const u={v:String(o.v||'').slice(0,12),c,m:String(o.m||'').slice(0,24),d:String(o.d||'').slice(0,12),n:Math.max(1,Math.min(4,o.n|0)),r:Math.max(0,o.r|0),h:String(o.h||'').slice(0,14),hu:String(o.hu||'').slice(0,20),_rx:Date.now()};games[c]=u;notify()}catch(e){}}
 function parse(){while(buf.length>=2){let m=1,len=0,i=1,b;do{if(i>=buf.length)return;b=buf[i++];len+=(b&127)*m;m*=128}while(b&128);if(buf.length<i+len)return;const h=buf[0],body=buf.subarray(i,i+len);buf=buf.slice(i+len);
  const t=h>>4;if(t==2){ready=1;send(pkt(0x82,[0,1,...str(PFX+'+'),0]));if(mine)pubMine()}else if(t==3){const tl=(body[0]<<8)|body[1],topic=td.decode(body.subarray(2,2+tl));let p=2+tl;if((h>>1)&3)p+=2;onPub(topic,body.subarray(p))}}}
 function connect(){if(ws)return;want=1;const url=URLS[ui%URLS.length];let w;try{w=new WebSocket(url,'mqtt')}catch(e){ui++;retry();return}ws=w;w.binaryType='arraybuffer';ready=0;buf=new Uint8Array(0);
@@ -55,7 +55,7 @@ function retry(){clearTimeout(retryT);if(!want)return;retryT=setTimeout(connect,
 function pubMine(){if(!mine||!ready)return;const o=Object.assign({},mine,{t:Date.now()});send(pkt(0x31,[...str(PFX+mine.c),...te.encode(JSON.stringify(o))]))}
 function clearTopic(t){if(t&&ready)send(pkt(0x31,[...str(t)]))}
 return{peers:()=>{connect();return list()},onPeers:f=>{connect();subs.push(f);return()=>{subs=subs.filter(x=>x!=f)}},
- presence:async p=>{if(!p||!('us' in p))return;const u=p.us;if(u&&u.c){const c=String(u.c).toUpperCase().slice(0,4),t=PFX+c;let nick='';try{nick=lobNick()}catch(e){}mine={v:u.v,c,m:u.m,d:u.d,n:u.n,r:u.r,h:nick};
+ presence:async p=>{if(!p||!('us' in p))return;const u=p.us;if(u&&u.c){const c=String(u.c).toUpperCase().slice(0,4),t=PFX+c;let nick='';try{nick=lobNick()}catch(e){}mine={v:u.v,c,m:u.m,d:u.d,n:u.n,r:u.r,h:nick,hu:u.hu};
   if(mineTopic!=t){if(mineTopic)clearTopic(mineTopic);mineTopic=t;if(ws){const o=ws;ws=null;try{o.close()}catch(e){}}connect()}else pubMine();clearInterval(refT);refT=setInterval(()=>{try{if(typeof mpPublish=='function')mpPublish()}catch(e){}pubMine()},30000);notify()}
   else{clearInterval(refT);const t=mineTopic;mine=null;mineTopic='';clearTopic(t);notify()}}}})();
 addEventListener('pagehide',()=>{try{LST.presence({us:null})}catch(e){}});
