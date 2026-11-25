@@ -33,6 +33,7 @@ return{
  on:(t,f)=>{(hs[t]=hs[t]||[]).push(f);return()=>{hs[t]=(hs[t]||[]).filter(x=>x!=f)}},
  presence:async p=>{pres[myId]=Object.assign(pres[myId]||{},p);if(isHost)bc({t:'p',id:myId,p:pres[myId]});else tx(hl,{t:'p',p})},
  peers:list,onPeers:f=>{pp.push(f);return()=>{const i=pp.indexOf(f);if(i>=0)pp.splice(i,1)}},
+ kick:id=>{if(isHost&&links[id])drop(id)},
  leave:async()=>{for(const id in links)drop(id);try{if(hl)hl.close()}catch(e){}try{if(peer)peer.destroy()}catch(e){}pp.length=0;for(const k in hs)delete hs[k]}}}
 /* Public game list: tiny MQTT 3.1.1 client over WebSocket (public broker). Hosts of public games post a small retained listing; it is cleared when they stop or disconnect. */
 const LST=(()=>{const URLS=window.USG_MQTT?[window.USG_MQTT]:['wss://broker.hivemq.com:8884/mqtt','wss://broker.emqx.io:8084/mqtt','wss://test.mosquitto.org:8081/mqtt'],PFX='undeadsiege-usg/v1/games/';
